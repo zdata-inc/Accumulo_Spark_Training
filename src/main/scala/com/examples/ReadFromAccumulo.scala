@@ -9,6 +9,7 @@ import org.apache.accumulo.core.security.Authorizations
 import org.apache.accumulo.minicluster.impl.{MiniAccumuloConfigImpl, MiniAccumuloClusterImpl}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.Job
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
 import java.util.{Collection => JCollection}
 
@@ -82,6 +83,58 @@ object ReadOfflineTable {
         classOf[Value])
 
       println(rdd.count())
+
+    } finally {
+      if(cluster != null) cluster.stop()
+    }
+  }
+}
+
+
+object ReadTableThenRepartitionRDD {
+  import Common._
+
+  def main(args: Array[String]) = {
+    var cluster: MAC = null
+    try {
+      cluster = MAC()
+      cluster.start()
+
+      // Put data in a table here
+      load_data(cluster)
+
+      cluster.offline_table("demo", "demo_offline")
+
+      // let's set up what we'd want a job to look like when reading from Accumulo
+      val job = cluster.job()
+      InputFormatBase.setRanges(job, new Range())
+      InputFormatBase.setInputTableName(job, "demo_offline")
+
+
+      // here we'll initialize spark
+      // note that the spark configuration needs to have the Key and Value classes serializable by Kryo
+      val sc = new SparkContext(new SparkConf().setAppName("Training Demo").setMaster("local").registerKryoClasses(Array(classOf[Key], classOf[Value])))
+
+      val rdd = sc.newAPIHadoopRDD(job.getConfiguration,
+        classOf[AccumuloInputFormat],
+        classOf[Key],
+        classOf[Value])
+
+      // some times we can gain speed by repartitioning the data to increase parallelism
+      val repartitioned = rdd.repartition(4)
+
+      // we can even cahce this RDD in memory or on disk. we can also store it in both. doing the persistence
+      // allows for downstream operations to be able to recompute from this point, rather than going back to Accumulo
+      val persisted = repartitioned.persist(StorageLevel.MEMORY_AND_DISK)
+
+      def square_key(e: (Key, Value)): Int = {
+        val int = e._1.getRow.toString.toInt
+        return (int * int)
+      }
+
+      val squares = persisted.map(square_key)
+
+      squares.take(10).foreach(println)
 
     } finally {
       if(cluster != null) cluster.stop()
