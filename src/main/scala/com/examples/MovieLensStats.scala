@@ -2,7 +2,8 @@ package com.examples
 
 // Exercise:
 // - load ratings, movies, users data files from the 1 million row MovieLens data
-// - build a regression tree to predict ratings based on user profile stats (age, gender, occupation)
+// - do a statistical summary on ratings
+// - build a regression tree to predict ratings based on 
 
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.tree.DecisionTree
@@ -18,7 +19,7 @@ import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import java.io._
 
-object MovieLensRegressionTree {
+object MovieLensStats {
 
   def main(arg: Array[String]) {
     
@@ -39,20 +40,32 @@ object MovieLensRegressionTree {
 
     val pathToFiles = arg(0)
     val outputPath = arg(1)
+    // case class Rating(userId: Int, movieId: Int, rating: Int)
+    // failboat
+    // val ratings = sc.textFile(new File(arg(0), "ratings.dat").toString).map(_.split("::")).map(r => Rating(r(0).toInt, r(1).toInt, r(2).toInt)).toDF()
 
     // load the stuff
     val ratArrays = sc.textFile(new File(pathToFiles, "ratings.dat").toString).map(_.split("::"))
     val movArrays = sc.textFile(new File(pathToFiles, "movies.dat").toString).map(_.split("::"))
     val usrArrays = sc.textFile(new File(pathToFiles, "users.dat").toString).map(_.split("::"))
     
+    // statistical summary of ratings
+    val ratvecs = ratArrays.map(x => Vectors.dense(x(2).toDouble))
+    val ratsum: MultivariateStatisticalSummary = Statistics.colStats(ratvecs)
+    println(ratsum.mean) 
+    println(ratsum.variance) 
+    println(ratsum.numNonzeros)
+
     // join all three RDDs    
     val usrById = usrArrays.map { line => (line(0),line) }
     val movById = movArrays.map { line => (line(0),line) }
     val ratJoinUsr = usrById.join(ratArrays.map { line => (line(0),line) })
-    //  superJoin is (movieid,(movieStArray,(usrStArray,ratStArray)))
+    // superjoin is (movieid,(movieStArray,(usrStArray,ratStArray)))
     val superJoin  = movById.join(ratJoinUsr.map { line => (line._2._2(1),line._2) })
-
-    // map the data into a LabeledPoint
+    
+    println(superJoin.take(1))
+    
+    // pull the data into a LabeledPoint
     // line._2._1 is movies
     // line._2._2._1 is users
     // line._2._2._2 is ratings
@@ -71,24 +84,18 @@ object MovieLensRegressionTree {
     val maxDepth = 5
     val maxBins = 32
 
-    // treat occupation and gender as categorical
     val categoricalFeaturesInfo = Map[Int, Int](1->21,2->2)
-    
-    // train the regression tree
     val model = DecisionTree.trainRegressor(trainingData, categoricalFeaturesInfo, impurity, maxDepth, maxBins)
 
-    // make prediction
     val labelAndPreds = testData.map { point =>
       val prediction = model.predict(point.features)
       (point.label, prediction)
     }
-    
-    // evaluate the performance on the test set
     val testErr = labelAndPreds.filter(r => r._1 != r._2).count.toDouble / testData.count()
     println("Test Error = " + testErr)
     println("Learned classification tree model:\n" + model.toDebugString)
 
-    // if you want to save it
+    // if you want
     // model.save(sc, "myModelPath")
     
   }
