@@ -2,16 +2,18 @@ package com.examples
 
 // Exercise:
 // - load ratings, movies, users data files from the 1 million row MovieLens data
+// - join the three RDDs using RDD.join
 // - build a regression tree to predict ratings based on user profile stats (age, gender, occupation)
+// - evaluate it
 
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.tree.DecisionTree
 import org.apache.spark.mllib.tree.model.DecisionTreeModel
-import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.mllib.linalg.{ Vector, Vectors }
 import org.apache.spark.mllib.stat.{ MultivariateStatisticalSummary, Statistics }
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
+import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.SparkConf
 import org.apache.log4j.Logger
 import org.apache.log4j.Logger
@@ -84,7 +86,8 @@ object MovieLensRegressionTree {
     }
     
     // evaluate the performance on the test set
-    val testErr = labelAndPreds.filter(r => r._1 != r._2).count.toDouble / testData.count()
+    // error is sum of abs value of difference between prediction and actual, divided by size
+    val testErr = labelAndPreds.map(r => Math.abs(r._1-r._2)).reduce((a,b)=> a + b).toDouble / testData.count()
     println("Test Error = " + testErr)
     println("Learned classification tree model:\n" + model.toDebugString)
 
