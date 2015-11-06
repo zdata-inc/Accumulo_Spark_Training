@@ -39,8 +39,11 @@ object MovieLensStats {
     val outputPath = arg(1)
 
     // load the stuff
+    // UserID::MovieID::Rating::Timestamp
     val ratArrays = sc.textFile(new File(pathToFiles, "ratings.dat").toString).map(_.split("::"))
+    // MovieID::Title::Genres
     val movArrays = sc.textFile(new File(pathToFiles, "movies.dat").toString).map(_.split("::"))
+    // UserID::Gender::Age::Occupation::Zip-code
     val usrArrays = sc.textFile(new File(pathToFiles, "users.dat").toString).map(_.split("::"))
 
     // convert to dense vectors with just ratings in there
@@ -50,6 +53,8 @@ object MovieLensStats {
     println(ratsum.mean) 
     println(ratsum.variance) 
     println(ratsum.numNonzeros)
+
+    // what else?  data cleansing?  filtered stats?
     
   }
 }

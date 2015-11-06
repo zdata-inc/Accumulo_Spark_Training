@@ -43,6 +43,7 @@ object MovieLensRegressionTree {
     val outputPath = arg(1)
 
     // load the stuff
+    // UserID::MovieID::Rating::Timestamp
     val ratArrays = sc.textFile(new File(pathToFiles, "ratings.dat").toString).map(_.split("::"))
     val movArrays = sc.textFile(new File(pathToFiles, "movies.dat").toString).map(_.split("::"))
     val usrArrays = sc.textFile(new File(pathToFiles, "users.dat").toString).map(_.split("::"))
@@ -58,7 +59,7 @@ object MovieLensRegressionTree {
     // line._2._1 is movies
     // line._2._2._1 is users
     // line._2._2._2 is ratings
-    val superJoinLabeled = superJoin.map(line => LabeledPoint(line._2._2._2(3).toDouble,Vectors.dense(
+    val superJoinLabeled = superJoin.map(line => LabeledPoint(line._2._2._2(2).toDouble,Vectors.dense(
         line._2._2._1(2).toDouble, // this is user age
         line._2._2._1(3).toDouble, // this is user occupation
         (if (line._2._2._1(1)=="M") 1.0 else 0.0) // this is user gender
@@ -87,7 +88,7 @@ object MovieLensRegressionTree {
     
     // evaluate the performance on the test set
     // error is sum of abs value of difference between prediction and actual, divided by size
-    val testErr = labelAndPreds.map(r => Math.abs(r._1-r._2)).reduce((a,b)=> a + b).toDouble / testData.count()
+    val testErr = labelAndPreds.map(r => Math.abs(r._1-r._2)).reduce(_ + _) / testData.count()
     println("Test Error = " + testErr)
     println("Learned classification tree model:\n" + model.toDebugString)
 
