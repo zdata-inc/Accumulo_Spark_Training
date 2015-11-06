@@ -14,9 +14,7 @@ import java.util.{Collection => JCollection}
 
 object ReadFromAccumulo {
 
-  // whenever a method calls for a Java Collection of type Range, we can just pass a single range
-  // and this will auto convert it for us
-  implicit def singletonRange(r: Range): JCollection[Range] = java.util.Collections.singleton(r)
+  import Common._
 
   def main(args: Array[String]) = {
     var cluster: MAC = null
@@ -48,19 +46,47 @@ object ReadFromAccumulo {
       if(cluster != null) cluster.stop()
     }
   }
+}
 
-  def load_data(cluster: MAC): Unit = {
-    val con = cluster.accumulo.getConnector("root", new PasswordToken("minerkasch"))
-    con.tableOperations().create("demo")
-    val bw = con.createBatchWriter("demo", new BatchWriterConfig())
-    for(x <- 1 to 100) {
-      val m = new Mutation(x.toString)
-      m.put("", "", "hello")
-      bw.addMutation(m)
+object ReadOfflineTable {
+  import Common._
+
+  def main(args: Array[String]) = {
+    var cluster: MAC = null
+    try {
+      cluster = MAC()
+      cluster.start()
+
+      // Put data in a table here
+      load_data(cluster)
+
+      //Let's assume the "demo" table is being actively written to and queried. We don't want our bulk analysis to
+      //have a big impact on those other clients, so we can clone and offline the table. Cloning is a lightweight
+      //operation that copies the metadata of a table at a particular time (like snapshotting), so no actual data
+      //on disk is copied. Offlining the table prevents any activity from occuring on the table, and allows for reads
+      //to bypass the TServer and read directly off of disk.
+      cluster.offline_table("demo", "demo_offline")
+
+      // let's set up what we'd want a job to look like when reading from Accumulo
+      val job = cluster.job()
+      InputFormatBase.setRanges(job, new Range())
+      InputFormatBase.setInputTableName(job, "demo_offline")
+
+
+      // here we'll initialize spark
+      val sc = new SparkContext(new SparkConf().setAppName("Training Demo").setMaster("local"))
+
+      val rdd = sc.newAPIHadoopRDD(job.getConfiguration,
+        classOf[AccumuloInputFormat],
+        classOf[Key],
+        classOf[Value])
+
+      println(rdd.count())
+
+    } finally {
+      if(cluster != null) cluster.stop()
     }
-    bw.close()
   }
-
 }
 
 class MAC(val accumulo: MiniAccumuloClusterImpl) {
@@ -94,6 +120,11 @@ class MAC(val accumulo: MiniAccumuloClusterImpl) {
     set_authorizations(job)
     return job
   }
+
+  def offline_table(table: String, offline_table_name: String): Unit = {
+    val con = accumulo.getConnector("root", "minerkasch")
+    con.tableOperations().clone(table, offline_table_name, true, new java.util.HashMap[String, String], new java.util.HashSet[String])
+  }
 }
 
 object MAC {
@@ -105,6 +136,24 @@ object MAC {
     val dir = Files.createTempDir()
     dir.deleteOnExit()
     return apply(dir)
+  }
+}
+
+object Common {
+  // whenever a method calls for a Java Collection of type Range, we can just pass a single range
+  // and this will auto convert it for us
+  implicit def singletonRange(r: Range): JCollection[Range] = java.util.Collections.singleton(r)
+
+  def load_data(cluster: MAC): Unit = {
+    val con = cluster.accumulo.getConnector("root", new PasswordToken("minerkasch"))
+    con.tableOperations().create("demo")
+    val bw = con.createBatchWriter("demo", new BatchWriterConfig())
+    for(x <- 1 to 100) {
+      val m = new Mutation(x.toString)
+      m.put("", "", "hello")
+      bw.addMutation(m)
+    }
+    bw.close()
   }
 }
 
