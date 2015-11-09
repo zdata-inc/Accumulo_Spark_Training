@@ -46,15 +46,25 @@ object MovieLensStats {
     // UserID::Gender::Age::Occupation::Zip-code
     val usrArrays = sc.textFile(new File(pathToFiles, "users.dat").toString).map(_.split("::"))
 
+    // ALL RATINGS 
     // convert to dense vectors with just ratings in there
     val ratvecs = ratArrays.map(x => Vectors.dense(x(2).toDouble))
     // statistical summary of ratings
     val ratsum: MultivariateStatisticalSummary = Statistics.colStats(ratvecs)
     println(ratsum.mean) 
     println(ratsum.variance) 
-    println(ratsum.numNonzeros)
 
-    // what else?  data cleansing?  filtered stats?
+    // FOR A MOVIE by name
+    val cluelessRatings = ratArrays.map( x=> (x(1),x)) // key ratings by movie id
+      .join(movArrays.map( x=> (x(0),x))) // RDD (movieId, (ratings,movies))
+      .filter(row => row._2._2(1).startsWith("Clueless")) // filter out other movies
+      .map(row => Vectors.dense(row._2._1(2).toDouble)) // convert to dense vector
+    print(cluelessRatings.take(2))
+    val movsum: MultivariateStatisticalSummary = Statistics.colStats(cluelessRatings)
+    println(movsum.mean) 
+    println(ratsum.variance) 
+
+    // what else?  chi square? 
     
   }
 }

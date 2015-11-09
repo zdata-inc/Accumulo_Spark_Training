@@ -44,25 +44,33 @@ object MovieLensRegressionTree {
 
     // load the stuff
     // UserID::MovieID::Rating::Timestamp
-    val ratArrays = sc.textFile(new File(pathToFiles, "ratings.dat").toString).map(_.split("::"))
-    val movArrays = sc.textFile(new File(pathToFiles, "movies.dat").toString).map(_.split("::"))
-    val usrArrays = sc.textFile(new File(pathToFiles, "users.dat").toString).map(_.split("::"))
+    val ratArrays = sc.textFile(new File(pathToFiles, "ratings.dat").toString)
+    val movArrays = sc.textFile(new File(pathToFiles, "movies.dat").toString)
+    val usrArrays = sc.textFile(new File(pathToFiles, "users.dat").toString)
     
     // join all three RDDs    
-    val usrById = usrArrays.map { line => (line(0),line) }
-    val movById = movArrays.map { line => (line(0),line) }
-    val ratJoinUsr = usrById.join(ratArrays.map { line => (line(0),line) })
+    val usrById = usrArrays.map { row => 
+      val line = row.split("::")
+      (line(0),line) 
+    }
+    val movById = movArrays.map { row =>
+      val line = row.split("::")
+      (line(0),line) }
+    val ratJoinUsr = usrById.join(ratArrays.map { row => 
+      val line = row.split("::")
+      (line(0),line) 
+      })
     //  superJoin is (movieid,(movieStArray,(usrStArray,ratStArray)))
     val superJoin  = movById.join(ratJoinUsr.map { line => (line._2._2(1),line._2) })
 
-    // map the data into a LabeledPoint
+    // map the data into a LabeledPoint. sorry about the mess, this could be cleaner.
     // line._2._1 is movies
     // line._2._2._1 is users
     // line._2._2._2 is ratings
     val superJoinLabeled = superJoin.map(line => LabeledPoint(line._2._2._2(2).toDouble,Vectors.dense(
         line._2._2._1(2).toDouble, // this is user age
         line._2._2._1(3).toDouble, // this is user occupation
-        (if (line._2._2._1(1)=="M") 1.0 else 0.0) // this is user gender
+        (if (line._2._2._1(1)=="M") 1.0 else 0.0) // this is user gender - convert to double
         )))
 
     val splits = superJoinLabeled.randomSplit(Array(0.7, 0.3))
