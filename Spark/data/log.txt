@@ -1,0 +1,6 @@
+ERROR	php: Why are you using me again
+INFO	Sam I am
+WARN	do you have enough memory??
+ERROR	the VM just crashed again
+ERROR	mysql cluster: replace with spark cluster
+WARN	It's too cold outside
