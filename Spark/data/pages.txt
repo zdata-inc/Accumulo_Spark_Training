@@ -1,0 +1,4 @@
+www.google.com,google
+www.facebook.com,facebook
+www.wikipedia.org,wikipedia
+www.twitter.com,twitter
