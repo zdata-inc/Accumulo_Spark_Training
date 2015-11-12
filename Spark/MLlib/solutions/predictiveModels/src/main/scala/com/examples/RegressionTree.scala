@@ -20,7 +20,7 @@ import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import java.io._
 
-object MovieLensRegressionTree {
+object RegressionTree {
 
   def main(arg: Array[String]) {
     

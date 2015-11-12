@@ -16,7 +16,7 @@ import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import java.io._
 
-object MovieLensStats {
+object basicStatistics {
 
   def main(arg: Array[String]) {
     
@@ -24,9 +24,9 @@ object MovieLensStats {
     Logger.getLogger("org.eclipse.jetty.server").setLevel(Level.OFF)
     var logger = Logger.getLogger(this.getClass())
 
-    if (arg.length < 2) {
+    if (arg.length < 1) {
       logger.error("=> wrong parameters number")
-      System.err.println("Usage: MainExample <path-to-files> <output-path>")
+      System.err.println("Usage: MainExample <path-to-files>")
       System.exit(1)
     }
     
@@ -38,39 +38,39 @@ object MovieLensStats {
     val sc = new SparkContext(conf)
 
     val pathToFiles = arg(0)
-    val outputPath = arg(1)
 
-    // STEP 1: Load the files
+    // Load the data
    
     // UserID::MovieID::Rating::Timestamp
     val ratArrays = sc.textFile(new File(pathToFiles, "ratings.dat").toString).map(_.split("::"))
+    
     // MovieID::Title::Genres
     val movArrays = sc.textFile(new File(pathToFiles, "movies.dat").toString).map(_.split("::"))
+    
     // UserID::Gender::Age::Occupation::Zip-code
     val usrArrays = sc.textFile(new File(pathToFiles, "users.dat").toString).map(_.split("::"))
 
-    // ALL RATINGS 
-    // convert to dense vectors with just ratings in there
-    val ratvecs = ratArrays.map(x => Vectors.dense(x(2).toDouble))
+    // Convert the ratAttays to dense vectors only containing the ratings
+    val ratvecs = ratArrays.map(x => //TODO: create a dense vector of only the ratngs(float) )
     
-    // statistical summary of ratings
-    val ratsum: MultivariateStatisticalSummary = Statistics.colStats(ratvecs)
-    println(ratsum.mean)
-    println(ratsum.variance) 
+    // Call colStas to compute the column statistics on the ratings vector
+    val ratsum: MultivariateStatisticalSummary = //TODO: compute the column statistics on ratvecs
+    
+    // Display the mean and variance
+    println("Ratings Mean: " + //TODO: display the mean)
+    println("Ratings Variance: " + //TODO: display the variance) 
 
-    // FOR A MOVIE by name
-    val cluelessRatings = ratArrays.map( x=> (x(1),x)) // key ratings by movie id
-      .join(movArrays.map( x=> (x(0),x))) // RDD (movieId, (ratings,movies))
-      .filter(row => row._2._2(1).startsWith("Clueless")) // filter out other movies
-      .map(row => Vectors.dense(row._2._1(2).toDouble)) // convert to dense vector
-    print(cluelessRatings.take(2))
+    // Get the ratings for a movie by name
+    val cluelessRatings = ratArrays.map( x=> (x(1),x))    // key ratings by movie id
+      .join(movArrays.map( x=> (x(0),x)))                 // RDD (movieId, (ratings,movies))
+      .filter(row => //TODO: filter out movies that aren't clueless) // filter out other movies
+      .map(row => Vectors.dense(row._2._1(2).toDouble))   // convert to dense vector
+   
+    // Call colStas to compute the column statistics on the cluelessRatings vector 
+    val movsum: MultivariateStatisticalSummary = //TODO: compute the column statistics on cluelessRatings
     
-    
-    val movsum: MultivariateStatisticalSummary = Statistics.colStats(cluelessRatings)
-    
-    // Display the statistics
-    println(movsum.mean) 
-    println(ratsum.variance) 
+    // Display the mean ratings for Clueless
+    println("Clueless mean ratings: " + //TODO: display the mean) 
     
   }
 }

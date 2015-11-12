@@ -1,9 +1,5 @@
 package com.examples
 
-// Exercise:
-// - load clustering data
-// - do a statistical summary on ratings
-
 import org.apache.spark.mllib.linalg.{ Vector, Vectors }
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
@@ -15,16 +11,17 @@ import java.io._
 import java.util.Random
 import org.apache.spark.mllib.clustering.{KMeans, KMeansModel}
 
-object ClusteringExample {
+object Clustering {
 
-  //
+  // Generate a data file
   def generateFile(n: Int,rows: Int,out: File) {
     var centroids = Array((0,0))
     val rng = new Random()
     var x = 0
     for ( x <- 1 to n)
       centroids = centroids :+ (x*4,x*2)
-    println(centroids)
+    // Display the number of centroids
+    println(centroids.length)
     val strm = new BufferedWriter(new FileWriter(out));
     for ( x <- 1 to rows) {
       val c = centroids(rng.nextInt(n))
@@ -46,35 +43,38 @@ object ClusteringExample {
       val k = 3+rng.nextInt(3)
       generateFile(k,2000,new File(arg(0),"clustering-data.txt"))
       System.exit(1)
-    } else if (arg.length < 3) {
+    } else if (arg.length < 2) {
       logger.error("=> wrong parameters number")
-      System.err.println("Usage: MainExample k <path-to-files> <output-path>")
+      System.err.println("Usage: MainExample k <path-to-files>")
       System.exit(1)
     }
 
-    val jobName = "ClusteringExample"
+    // Set the job name
+    val jobName = "Clustering"
 
+    // Configure the SparkContext
     val conf = new SparkConf().setAppName(jobName)
     val sc = new SparkContext(conf)
 
-    val k = arg(0).toInt
+    // Get the number of clusters
+    val numClusters = arg(0).toInt
     val pathToFiles = arg(1)
-    val outputPath = arg(2)
 
-    // load the stuff
-    val unproc = sc.textFile(new File(pathToFiles, "clustering-data.txt").toString)
+    // Load the clustering data
+    val data = sc.textFile(new File(pathToFiles, "clustering-data.txt").toString)
 
-    // process the data (and cache it)
-    val proc = unproc.map(s=> Vectors.dense(s.split(",").map(_.toDouble))).cache()
+    // Parse the data (and cache it)
+    val parsedData = data.map(s=> //TODO: create a dense vector ).cache()
     
     // start with k=2
-    val i = 20
+    val numIterations = 20
 
-    // train the model
-    val clusters = KMeans.train(proc, k, i)
+    // Train the model
+    val clusters = //TODO: Call Kmeans to train the data
     
-    // evaluate
-    val WSSSE = clusters.computeCost(proc)
+    // Evaluate clustering by computing Within Set Sum of Squared Errors
+    val WSSSE = //TODO: compute the cost of the model
+    
     println("Within Set Sum of Squared Errors = " + WSSSE)
 
   }
