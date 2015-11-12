@@ -29,16 +29,19 @@ object MovieLensStats {
       System.err.println("Usage: MainExample <path-to-files> <output-path>")
       System.exit(1)
     }
-
+    
+    // Set the job name
     val jobName = "MovieLensPlusMLlib"
 
+    // Configure the SparkContext
     val conf = new SparkConf().setAppName(jobName)
     val sc = new SparkContext(conf)
 
     val pathToFiles = arg(0)
     val outputPath = arg(1)
 
-    // load the stuff
+    // STEP 1: Load the files
+   
     // UserID::MovieID::Rating::Timestamp
     val ratArrays = sc.textFile(new File(pathToFiles, "ratings.dat").toString).map(_.split("::"))
     // MovieID::Title::Genres
@@ -49,9 +52,10 @@ object MovieLensStats {
     // ALL RATINGS 
     // convert to dense vectors with just ratings in there
     val ratvecs = ratArrays.map(x => Vectors.dense(x(2).toDouble))
+    
     // statistical summary of ratings
     val ratsum: MultivariateStatisticalSummary = Statistics.colStats(ratvecs)
-    println(ratsum.mean) 
+    println(ratsum.mean)
     println(ratsum.variance) 
 
     // FOR A MOVIE by name
@@ -60,11 +64,13 @@ object MovieLensStats {
       .filter(row => row._2._2(1).startsWith("Clueless")) // filter out other movies
       .map(row => Vectors.dense(row._2._1(2).toDouble)) // convert to dense vector
     print(cluelessRatings.take(2))
+    
+    
     val movsum: MultivariateStatisticalSummary = Statistics.colStats(cluelessRatings)
+    
+    // Display the statistics
     println(movsum.mean) 
     println(ratsum.variance) 
-
-    // what else?  chi square? 
     
   }
 }
