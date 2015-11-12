@@ -28,7 +28,7 @@ object RegressionTree {
     Logger.getLogger("org.eclipse.jetty.server").setLevel(Level.OFF)
     var logger = Logger.getLogger(this.getClass())
 
-    if (arg.length < 1) {
+    if (arg.length < 2) {
       logger.error("=> wrong parameters number")
       System.err.println("Usage: MainExample <path-to-files>")
       System.exit(1)
@@ -78,9 +78,10 @@ object RegressionTree {
     // line._2._1 is movies
     // line._2._2._1 is users
     // line._2._2._2 is ratings
-    val superJoinLabeled = superJoin.map(line => LabeledPoint(line._2._2._2(2).toDouble,Vectors.dense(
-        line._2._2._1(2).toDouble, // this is user age
-        line._2._2._1(3).toDouble, // this is user occupation
+    val superJoinLabeled = superJoin.map(line => LabeledPoint(// TODO set the labeled point to the rating
+        ,Vectors.dense(
+        //TODO set the users age, // this is user age
+        // TODO set the users occupation , // this is user occupation
         (if (line._2._2._1(1)=="M") 1.0 else 0.0) // this is user gender - convert to double
         )))
 
@@ -95,10 +96,12 @@ object RegressionTree {
 
     // Use 2 categorical features
     // occupation has 21 possible values and gender has 2 
-    val categoricalFeaturesInfo = Map[Int, Int](1 -> 21, 2 -> 2)
+    // TODO: Set 2 categorical features bease on our labeled point
+    // 1 -> 21, 2 -> 2
+    val categoricalFeaturesInfo = Map[Int, Int](//TODO: Set 2 )
     
     // Train the regression tree
-    val model = DecisionTree.trainRegressor(trainingData, categoricalFeaturesInfo, impurity, maxDepth, maxBins)
+    val model = // TODO Train the regressor
 
     // Make prediction
     val labelAndPreds = testData.map { point =>
